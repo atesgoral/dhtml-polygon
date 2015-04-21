@@ -35,7 +35,7 @@ function getPrimitive(name)
 {
     var p = g_primitives[name];
     var prim;
-    
+
     if (p != undefined)
     {
         if (prim = p.available.pop())
@@ -48,25 +48,25 @@ function getPrimitive(name)
         p = { available: [], used: [] };
         g_primitives[name] = p;
     }
-    
+
     if (prim == undefined)
     {
         prim = g_nodes["tmp_" + name].cloneNode(false);
-        
+
         prim.id = "";
-        
+
         g_nodes.canvas.appendChild(prim);
     }
-    
+
     p.used.push(prim);
-    
+
     return prim;
 }
 
 function point(x, y)
 {
     var node = getPrimitive("point");
-    
+
     node.style.left = x - 1 + "px";
     node.style.top = y - 1 + "px";
 }
@@ -77,10 +77,10 @@ function primitive(prim, x, y, w, h)
     {
         return;
     }
-    
+
     var node = getPrimitive(prim);
     var border_adj = 0;
-    
+
     if ((g_options.show_triangles && prim.substr(0, 3) == "tri") ||
         (g_options.show_rectangles && prim == "rect"))
     {
@@ -103,6 +103,8 @@ function primitive(prim, x, y, w, h)
     node.style.top = y + "px";
     node.style.width = w - border_adj + "px";
     node.style.height = h - border_adj + "px";
+
+    return node;
 }
 
 function polygon(x, y, r, n, tilt)
@@ -118,7 +120,7 @@ function polygon(x, y, r, n, tilt)
         var a = Math.PI * 2 / n * i + tilt;
         var vertx = x + Math.round(r * Math.cos(a));
         var verty = y + Math.round(r * Math.sin(a));
-        
+
         minx = Math.min(minx, vertx);
         miny = Math.min(miny, verty);
         maxx = Math.max(maxx, vertx);
@@ -129,7 +131,7 @@ function polygon(x, y, r, n, tilt)
             y: verty
         });
     }
-        
+
     primitive("fill", minx, miny, maxx - minx, maxy - miny);
 
     for (var i = 0; i < vertices.length; i++)
@@ -142,56 +144,76 @@ function polygon(x, y, r, n, tilt)
 
         var dx = x2 - x1;
         var dy = y2 - y1;
-        
+
         if (dx * dy)
         {
             var sdx = Math.abs(dx) / dx;
             var sdy = Math.abs(dy) / dy;
-            
+
             var norm = sdx / 2 + sdy + 1.5;
-            var prim = "tri" + (g_options.fake_splines ? "r" : "") + norm;
-            
+            var prim = "tri" /*+ (g_options.fake_splines ? "r" : "") + norm*/;
+
             switch (norm)
             {
             case 0:
                 /* sw */
-                primitive(prim, x2, y2, -dx, -dy);
-                
+                with (primitive(prim, x2, y2, -dx, -dy).style)
+                {
+                    width = height = 0;
+                    borderRight = -dx + "px solid transparent";
+                    borderBottom = -dy + "px solid #666699";
+                }
+
                 if (x2 > minx)
                 {
                    primitive("rect", minx, y2, x2 - minx, y1 - y2);
                 }
-                
+
                 break;
             case 1:
                 /* nw */
-                primitive(prim, x1, y2, dx, -dy);
+                with (primitive(prim, x1, y2, dx, -dy).style)
+                {
+                    width = height = 0;
+                    borderRight = dx + "px solid transparent";
+                    borderTop = -dy + "px solid #666699";
+                }
 
                 if (x1 > minx)
                 {
                     primitive("rect", minx, y2, x1 - minx, y1 - y2);
                 }
-                
+
                 break;
             case 2:
                 /* se */
-                primitive(prim, x2, y1, -dx, dy);
-                
+                with (primitive(prim, x2, y1, -dx, dy).style)
+                {
+                    width = height = 0;
+                    borderLeft = -dx + "px solid transparent";
+                    borderBottom = dy + "px solid #666699";
+                }
+
                 if (x1 < maxx)
                 {
                     primitive("rect", x1, y1, maxx - x1, y2 - y1);
                 }
-                
+
                 break;
             case 3:
                 /* ne */
-                primitive(prim, x1, y1, dx, dy);
-                
+                with (primitive(prim, x1, y1, dx, dy).style)
+                {
+                    width = height = 0;
+                    borderLeft = dx + "px solid transparent";
+                    borderTop = dy + "px solid #666699";
+                }
+
                 if (x2 < maxx)
                 {
                     primitive("rect", x2, y1, maxx - x2, y2 - y1);
                 }
-                
+
                 break;
             }
         }
@@ -206,7 +228,7 @@ function polygon(x, y, r, n, tilt)
                 primitive("rect", x1, y1, maxx - x1, y2 - y1);
             }
         }
-            
+
         if (g_options.show_vertices)
         {
             point(x1, y1);
@@ -220,13 +242,13 @@ function beginUpdate()
     {
         var p = g_primitives[name];
         var prim;
-        
+
         while (prim = p.used.pop())
         {
             prim.style.visibility = "hidden"; // Optimize?
             p.available.push(prim);
         }
-    }   
+    }
 }
 
 function endUpdate()
@@ -238,13 +260,13 @@ function tick()
 {
     var start = new Date();
     var t = start - g_epoch;
-    
+
     beginUpdate();
 
     g_phase = t / 100000 * g_properties.speed.current + g_offset;
 
     polygon(300, 320, 200, g_properties.sides.current, g_phase);
-    
+
     if (g_options.evil_twin)
     {
         polygon(550, 550, 40, g_properties.sides.current + 1, -g_phase);
@@ -254,11 +276,11 @@ function tick()
 
     var elapsed = new Date() - start;
     var sleep = 1000 / g_properties.fps.current;
-    
+
     var delta = sleep - elapsed;
-           
+
     var load_color;
-    
+
     if (delta < 0)
     {
         load_color = "#ff8000";
@@ -268,12 +290,12 @@ function tick()
     {
         load_color = "#ffffff";
     }
-        
+
     g_properties.fps.input_node.style.color = load_color;
     g_nodes.load.style.color = load_color;
-    
+
     var load = 1 - delta / sleep;
-    
+
     var bars_text = "!!!!!!!!!!!!!!!!!!!!!!!";
     g_nodes.load.value = bars_text.substr(0, Math.round(bars_text.length * load));
 
@@ -283,16 +305,16 @@ function tick()
 function setProp(name, value)
 {
     var prop = g_properties[name];
-    
+
     prop.current = Math.min(Math.max(value, prop.min), prop.max);;
     prop.input_node.value = prop.current;
-    
+
     if (name == "speed")
     {
         g_offset = g_phase;
         g_epoch = new Date();
     }
-    
+
     return false;
 }
 
@@ -318,20 +340,20 @@ function init()
 
     g_nodes.canvas = $("canvas");
     g_nodes.load = $("load");
-        
+
     var templates = $("tmp").childNodes;
 
     for (var i = 0; i < templates.length; i++)
     {
         var node = templates[i];
-        
+
         if (node.nodeType == 1)
         {
             g_nodes[node.id] = templates[i];
         }
     }
-   
+
     g_epoch = new Date();
-    
+
     tick();
 }
