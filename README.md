@@ -1,1 +1,1 @@
-# dhtml-polygon
+# html-polygon
